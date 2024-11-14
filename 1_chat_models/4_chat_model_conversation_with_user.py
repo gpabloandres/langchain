@@ -18,8 +18,10 @@ chat_history.append(system_message)
 
 while True:
     query = input("Tu consulta: ")
+    
     if query.lower() == "salir":
         break
+    
     chat_history.append(HumanMessage(content=query))
     
     result = model(chat_history)
