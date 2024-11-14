@@ -5,7 +5,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain import hub
 from langchain.agents import AgentExecutor, create_structured_chat_agent
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
-from langchain_core.tools import Tool
+from pydantic import BaseModel
+from langchain_core.tools import StructuredTool
 import datetime
 import wikipediaapi
 
@@ -16,33 +17,47 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
 
-# Función auxiliar para obtener la hora actual
-def get_current_time(input=None):
+# Esquema de argumentos vacío para `get_current_time`
+class EmptyArgs(BaseModel):
+    pass
+
+# Esquema de argumentos para `search_wikipedia`
+class WikipediaArgs(BaseModel):
+    query: str
+
+# Función para obtener la hora actual sin argumentos
+def get_current_time():
     """Devuelve la hora actual en formato H:MM AM/PM."""
     now = datetime.datetime.now()
     return now.strftime("%I:%M %p")
 
-# Función auxiliar para buscar en Wikipedia
-def search_wikipedia(query):
+# Función para buscar en Wikipedia, con un manejo de tipo adicional
+def search_wikipedia(query: str):
     """Busca en Wikipedia y devuelve el resumen del primer resultado."""
-    wiki = wikipediaapi.Wikipedia('en')  # 'es' para español, cambia a 'en' para inglés
+    # Aseguramos que `query` sea tratado como cadena
+    query = str(query) if isinstance(query, str) else query.get("title", "")
+
+    # Configuración de Wikipedia con el user-agent adecuado
+    wiki = wikipediaapi.Wikipedia('en', user_agent="MiApp/1.0 (miemail@dominio.com)")
     page = wiki.page(query)
     
     if page.exists():
-        return page.summary[:100]  # Limita a 500 caracteres para brevedad
+        return page.summary[:100]  # Limita a 100 caracteres para brevedad
     else:
         return "No pude encontrar información sobre ese tema."
 
-# Definición de herramientas
+# Definición de herramientas usando `StructuredTool`
 tools = [
-    Tool(
+    StructuredTool(
         name="Time",
         func=get_current_time,
+        args_schema=EmptyArgs,  # Esquema vacío para la función `get_current_time`
         description="Útil para cuando necesitas saber la hora actual.",
     ),
-    Tool(
+    StructuredTool(
         name="Wikipedia",
         func=search_wikipedia,
+        args_schema=WikipediaArgs,  # Esquema con campo `query` para `search_wikipedia`
         description="Útil para cuando necesitas información sobre un tema.",
     )
 ]
