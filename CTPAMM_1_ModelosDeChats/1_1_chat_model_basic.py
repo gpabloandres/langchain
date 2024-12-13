@@ -9,7 +9,7 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 model = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
 
-result = model.invoke("Cuánto es 81 divido 9?")
+result = model.invoke("Hola quién sos?")
 
 #print("Full result: ")
 #print(result)
